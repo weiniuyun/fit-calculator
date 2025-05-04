@@ -1,0 +1,3077 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+  <meta charset="UTF-8">
+
+  <title> ISO 286 Fit Calculator| Reko</title>
+  <meta name="description"
+    content="The ISO 286 Fit Calculator is a powerful tool designed to calculate hole and shaft limits and fits according to the ISO 286 standard. " />
+  <script>
+
+    // 扩展的IT等级（IT01-IT18）
+    const itGrades = Array.from({ length: 18 }, (_, i) => "IT" + (i + 1));
+
+
+    const toleranceTable = [
+      [1, 3, 0.8, 1.2, 2, 3, 4, 6, 10, 14, 25, 40, 60, 0.1, 0.14, 0.25, 0.4, 0.6, 1, 1.4],
+      [3, 6, 1, 1.5, 2.5, 4, 5, 8, 12, 18, 30, 48, 75, 0.12, 0.18, 0.3, 0.48, 0.75, 1.2, 1.8],
+      [6, 10, 1, 1.5, 2.5, 4, 6, 9, 15, 22, 36, 58, 90, 0.15, 0.22, 0.36, 0.58, 0.9, 1.5, 2.2],
+      [10, 18, 1.2, 2, 3, 5, 8, 11, 18, 27, 43, 70, 110, 0.18, 0.27, 0.43, 0.7, 1.1, 1.8, 2.7],
+      [18, 30, 1.5, 2.5, 4, 6, 9, 13, 21, 33, 52, 84, 130, 0.21, 0.33, 0.52, 0.84, 1.3, 2.1, 3.3],
+      [30, 50, 1.5, 2.5, 4, 7, 11, 16, 25, 39, 62, 100, 160, 0.25, 0.39, 0.62, 1, 1.6, 2.5, 3.9],
+      [50, 80, 2, 3, 5, 8, 13, 19, 30, 46, 74, 120, 190, 0.3, 0.46, 0.74, 1.2, 1.9, 3, 4.6],
+      [80, 120, 2.5, 4, 6, 10, 15, 22, 35, 54, 87, 140, 220, 0.35, 0.54, 0.87, 1.4, 2.2, 3.5, 5.4],
+      [120, 180, 3.5, 5, 8, 12, 18, 25, 40, 63, 100, 160, 250, 0.4, 0.63, 1, 1.6, 2.5, 4, 6.3],
+      [180, 250, 4.5, 7, 10, 14, 20, 29, 46, 72, 115, 185, 290, 0.46, 0.72, 1.15, 1.85, 2.9, 4.6, 7.2],
+      [250, 315, 6, 8, 12, 16, 23, 32, 52, 81, 130, 210, 320, 0.52, 0.81, 1.3, 2.1, 3.2, 5.2, 8.1],
+      [315, 400, 7, 9, 13, 18, 25, 36, 57, 89, 140, 230, 360, 0.57, 0.89, 1.4, 2.3, 3.6, 5.7, 8.9],
+      [400, 500, 8, 10, 15, 20, 27, 40, 63, 97, 155, 250, 400, 0.63, 0.97, 1.55, 2.5, 4, 6.3, 9.7],
+      [500, 630, 9, 11, 16, 22, 32, 44, 70, 110, 175, 280, 440, 0.7, 1.1, 1.75, 2.8, 4.4, 7, 11],
+      [630, 800, 10, 13, 18, 25, 36, 50, 80, 125, 200, 320, 500, 0.8, 1.25, 2, 3.2, 5, 8, 12.5],
+      [800, 1000, 11, 15, 21, 28, 40, 56, 90, 140, 230, 360, 560, 0.9, 1.4, 2.3, 3.6, 5.6, 9, 14],
+      [1000, 1250, 13, 18, 24, 33, 47, 66, 105, 165, 260, 420, 660, 1.05, 1.65, 2.6, 4.2, 6.6, 10.5, 16.5],
+      [1250, 1600, 15, 21, 29, 39, 55, 78, 125, 195, 310, 500, 780, 1.25, 1.95, 3.1, 5, 7.8, 12.5, 19.5],
+      [1600, 2000, 18, 25, 35, 46, 65, 92, 150, 230, 370, 600, 920, 1.5, 2.3, 3.7, 6, 9.2, 15, 23],
+      [2000, 2500, 22, 30, 41, 55, 78, 110, 175, 280, 440, 700, 1100, 1.75, 2.8, 4.4, 7, 11, 17.5, 28],
+      [2500, 3150, 26, 36, 50, 68, 96, 135, 210, 330, 540, 860, 1350, 2.1, 3.3, 5.4, 8.6, 13.5, 21, 33]
+    ];
+
+    // 计算标准公差值（单位：毫米）
+    function calculateStandardTolerance (size, itGrade) {
+      const sizeIndex = toleranceTable.findIndex(r => size > r[0] && size <= r[1]);
+      const gradeIndex = itGrades.indexOf(itGrade);
+      if (sizeIndex === -1) throw new Error(`尺寸需在3-500mm之间`);
+      if (gradeIndex === -1) throw new Error(`IT等级需为IT01-IT18`);
+      //console.log(itGrades, sizeIndex, toleranceTable[sizeIndex], gradeIndex)
+      tolerance = (toleranceTable[sizeIndex] && toleranceTable[sizeIndex][gradeIndex + 2] || 0);
+      return gradeIndex <= 10 ? tolerance / 1000 : tolerance
+    }
+
+
+    const shaftCodes = [
+      "a", "b", "c", "cd", "d", "e", "ef", "f", "fg", "g", "h", "m", "n", "p", "r", "s", "t", "u", "v", "x", "y", "z", "za", "zb", "zc"
+    ];
+
+    const shaftDeviations = [
+      [0, 3, -270, -140, -60, -34, -20, -14, -10, -6, -4, -2, 0, 2, 4, 6, 10, 14, 0, 18, 0, 20, 0, 26, 32, 40, 60],
+      [3, 6, -270, -140, -60, -34, -20, -14, -10, -6, -4, -2, 0, 2, 4, 6, 10, 14, 0, 18, 0, 20, 0, 26, 32, 40, 60],
+      [6, 10, -280, -150, -80, -56, -40, -25, -18, -13, -8, -5, 0, 6, 10, 15, 19, 23, 0, 28, 0, 34, 0, 42, 52, 67, 97],
+      [10, 14, -290, -150, -95, -56, -50, -32, -18, -16, -8, -6, 0, 7, 12, 18, 23, 28, 0, 33, 0, 40, 0, 50, 64, 90, 130],
+      [14, 18, -290, -150, -95, -56, -50, -32, -18, -16, -8, -6, 0, 7, 12, 18, 23, 28, 0, 33, 39, 45, 60, 0, 77, 108, 150],
+      [18, 24, -300, -160, -110, -56, -65, -40, -18, -20, -8, -7, 0, 8, 15, 22, 28, 35, 0, 41, 47, 54, 73, 63, 98, 136, 188],
+      [24, 30, -300, -160, -110, -56, -65, -40, -18, -20, -8, -7, 0, 8, 15, 22, 28, 35, 41, 48, 55, 64, 75, 88, 118, 160, 218],
+      [30, 40, -310, -170, -120, -56, -80, -50, -18, -25, -8, -9, 0, 9, 17, 26, 34, 43, 48, 60, 68, 80, 94, 112, 148, 200, 274],
+      [40, 50, -320, -180, -130, -56, -80, -50, -18, -25, -8, -9, 0, 9, 17, 26, 34, 43, 54, 70, 81, 97, 114, 136, 180, 242, 325],
+      [50, 65, -340, -190, -140, -56, -100, -60, -18, -30, -8, -10, 0, 11, 20, 32, 41, 53, 66, 87, 102, 122, 144, 172, 226, 300, 405],
+      [65, 80, -360, -200, -150, -56, -100, -60, -18, -30, -8, -10, 0, 11, 20, 32, 43, 59, 75, 102, 120, 146, 174, 210, 274, 360, 480],
+      [80, 100, -380, -220, -170, -56, -120, -72, -18, -36, -8, -12, 0, 13, 23, 37, 51, 71, 91, 124, 146, 178, 214, 258, 335, 445, 585],
+      [100, 120, -410, -240, -180, -56, -120, -72, -18, -36, -8, -12, 0, 13, 23, 37, 54, 79, 104, 144, 172, 210, 254, 310, 400, 525, 690],
+      [120, 140, -460, -260, -200, -56, -145, -85, -18, -43, -8, -14, 0, 15, 27, 43, 63, 92, 122, 170, 202, 248, 300, 365, 470, 620, 800],
+      [140, 160, -520, -280, -210, -56, -145, -85, -18, -43, -8, -14, 0, 15, 27, 43, 65, 100, 134, 190, 228, 280, 340, 415, 535, 700, 900],
+      [160, 180, -580, -310, -230, -56, -145, -85, -18, -43, -8, -14, 0, 15, 27, 43, 68, 108, 146, 210, 252, 310, 380, 465, 600, 780, 1000],
+      [180, 200, -660, -340, -240, -56, -145, -85, -18, -43, -8, -14, 0, 17, 31, 50, 77, 122, 166, 236, 284, 350, 425, 520, 670, 880, 1150],
+      [200, 225, -740, -380, -260, -56, -170, -100, -18, -50, -8, -15, 0, 17, 31, 50, 80, 130, 180, 258, 310, 385, 470, 575, 740, 960, 1250],
+      [225, 250, -820, -420, -280, -56, -170, -100, -18, -50, -8, -15, 0, 17, 31, 50, 84, 140, 196, 284, 340, 425, 520, 640, 820, 1050, 1350],
+      [250, 280, -920, -480, -300, -56, -190, -110, -18, -56, -8, -17, 0, 20, 34, 56, 94, 158, 218, 315, 385, 475, 580, 710, 920, 1200, 1550],
+      [280, 315, -1050, -540, -330, -56, -190, -110, -18, -56, -8, -17, 0, 20, 34, 56, 98, 170, 240, 350, 425, 525, 650, 790, 1000, 1300, 1700],
+      [315, 355, -1200, -600, -360, -56, -210, -125, -18, -62, -8, -18, 0, 21, 37, 62, 108, 190, 268, 390, 475, 590, 730, 900, 1150, 1500, 1900],
+      [355, 400, -1350, -680, -400, -56, -210, -125, -18, -62, -8, -18, 0, 21, 37, 62, 114, 208, 294, 435, 530, 660, 820, 1000, 1300, 1650, 2100],
+      [400, 450, -1500, -760, -440, -56, -230, -135, -18, -68, -8, -20, 0, 23, 40, 68, 126, 232, 330, 490, 595, 740, 920, 1100, 1450, 1850, 2400],
+      [450, 500, -1650, -840, -480, -56, -230, -135, -18, -68, -8, -20, 0, 23, 40, 68, 132, 252, 360, 540, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [500, 560, -1650, -840, -480, -56, -260, -145, -18, -76, -8, -22, 0, 26, 44, 78, 150, 280, 400, 600, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [560, 630, -1650, -840, -480, -56, -260, -145, -18, -76, -8, -22, 0, 26, 44, 78, 155, 310, 450, 660, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [630, 710, -1650, -840, -480, -56, -290, -160, -18, -80, -8, -24, 0, 30, 50, 88, 175, 340, 500, 740, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [710, 800, -1650, -840, -480, -56, -290, -160, -18, -80, -8, -24, 0, 30, 50, 88, 185, 380, 560, 840, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [800, 900, -1650, -840, -480, -56, -320, -170, -18, -86, -8, -26, 0, 34, 56, 100, 210, 430, 620, 940, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [900, 1000, -1650, -840, -480, -56, -320, -170, -18, -86, -8, -26, 0, 34, 56, 100, 220, 470, 680, 1050, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [1000, 1120, -1650, -840, -480, -56, -350, -195, -18, -98, -8, -28, 0, 40, 66, 120, 250, 520, 780, 1150, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [1120, 1250, -1650, -840, -480, -56, -350, -195, -18, -98, -8, -28, 0, 40, 66, 120, 260, 580, 840, 1300, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [1250, 1400, -1650, -840, -480, -56, -390, -220, -18, -110, -8, -30, 0, 48, 78, 140, 300, 640, 960, 1450, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [1400, 1600, -1650, -840, -480, -56, -390, -220, -18, -110, -8, -30, 0, 48, 78, 140, 330, 720, 1050, 1600, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [1600, 1800, -1650, -840, -480, -56, -430, -240, -18, -120, -8, -32, 0, 58, 92, 170, 370, 820, 1200, 1850, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [1800, 2000, -1650, -840, -480, -56, -430, -240, -18, -120, -8, -32, 0, 58, 92, 170, 400, 920, 1350, 2000, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [2000, 2240, -1650, -840, -480, -56, -480, -260, -18, -130, -8, -34, 0, 68, 110, 195, 440, 1000, 1500, 2300, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [2240, 2500, -1650, -840, -480, -56, -480, -260, -18, -130, -8, -34, 0, 68, 110, 195, 460, 1100, 1650, 2500, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [2500, 2800, -1650, -840, -480, -56, -520, -290, -18, -145, -8, -38, 0, 76, 135, 240, 550, 1250, 1900, 2900, 660, 820, 1000, 1250, 1600, 2100, 2600],
+      [2800, 3150, -1650, -840, -480, -56, -520, -290, -18, -145, -8, -38, 0, 76, 135, 240, 580, 1400, 2100, 3200, 660, 820, 1000, 1250, 1600, 2100, 2600]
+    ];
+
+    const shaftDeviationsJ = [
+      [0, 3, -2, -4],
+      [3, 6, -2, -4],
+      [6, 10, -2, -5],
+      [10, 14, -3, -6],
+      [14, 18, -3, -6],
+      [18, 24, -4, -8],
+      [24, 30, -4, -8],
+      [30, 40, -5, -10],
+      [40, 50, -5, 10],
+      [50, 65, -7, -12],
+      [65, 80, -7, -12],
+      [80, 100, -9, -15],
+      [100, 120, -9, -15],
+      [120, 140, -11, -18],
+      [140, 160, -11, -18],
+      [160, 180, -11, -18],
+      [180, 200, -13, -21],
+      [200, 225, -13, -21],
+      [225, 250, -13, -21],
+      [250, 280, -16, -26],
+      [280, 315, -16, -26],
+      [315, 355, -18, -28],
+      [355, 400, -18, -28],
+      [400, 450, -20, -32],
+      [450, 500, -20, -32]
+    ]
+
+    const shaftDeviationsK = [
+      [0, 3, 0],
+      [3, 6, 1],
+      [6, 10, 1],
+      [10, 14, 1],
+      [14, 18, 1],
+      [18, 24, 2],
+      [24, 30, 2],
+      [30, 40, 2],
+      [40, 50, 2],
+      [50, 65, 2],
+      [65, 80, 2],
+      [80, 100, 3],
+      [100, 120, 3],
+      [120, 140, 3],
+      [140, 160, 3],
+      [160, 180, 3],
+      [180, 200, 4],
+      [200, 225, 4],
+      [225, 250, 4],
+      [250, 280, 4],
+      [280, 315, 4],
+      [315, 355, 4],
+      [355, 400, 4],
+      [400, 450, 5],
+      [450, 500, 5]
+    ];
+
+    const holeCodes = [
+      "A", "B", "C", "CD", "D", "E", "EF", "F", "FG", "G", "H"
+    ];
+    const holeDeviations = [
+      [0, 3, 270, 140, 60, 34, 20, 14, 10, 6, 4, 2, 0],
+      [3, 6, 270, 140, 70, 46, 30, 20, 14, 10, 6, 4, 0],
+      [6, 10, 280, 150, 80, 56, 40, 25, 18, 13, 8, 5, 0],
+      [10, 14, 290, 150, 95, 0, 50, 32, 0, 16, 0, 6, 0],
+      [14, 18, 290, 150, 95, 0, 50, 32, 0, 16, 0, 6, 0],
+      [18, 24, 300, 160, 110, 0, 65, 40, 0, 20, 0, 7, 0],
+      [24, 30, 300, 160, 110, 0, 65, 40, 0, 20, 0, 7, 0],
+      [30, 40, 310, 170, 120, 0, 80, 50, 0, 25, 0, 9, 0],
+      [40, 50, 320, 180, 130, 0, 80, 50, 0, 25, 0, 9, 0],
+      [50, 65, 340, 190, 140, 0, 100, 60, 0, 30, 0, 10, 0],
+      [65, 80, 360, 200, 150, 0, 100, 60, 0, 30, 0, 10, 0],
+      [80, 100, 380, 220, 170, 0, 120, 72, 0, 36, 0, 12, 0],
+      [100, 120, 410, 240, 180, 0, 120, 72, 0, 36, 0, 12, 0],
+      [120, 140, 460, 260, 200, 0, 145, 85, 0, 43, 0, 14, 0],
+      [140, 160, 520, 280, 210, 0, 145, 85, 0, 43, 0, 14, 0],
+      [160, 180, 580, 310, 230, 0, 145, 85, 0, 43, 0, 14, 0],
+      [180, 200, 660, 340, 240, 0, 170, 100, 0, 50, 0, 15, 0],
+      [200, 225, 740, 380, 260, 0, 170, 100, 0, 50, 0, 15, 0],
+      [225, 250, 820, 420, 280, 0, 170, 100, 0, 50, 0, 15, 0],
+      [250, 280, 922, 480, 300, 0, 190, 110, 0, 56, 0, 17, 0],
+      [280, 315, 1050, 540, 330, 0, 190, 110, 0, 56, 0, 17, 0],
+      [315, 355, 1200, 600, 360, 0, 210, 125, 0, 62, 0, 18, 0],
+      [355, 400, 1350, 680, 400, 0, 210, 125, 0, 62, 0, 18, 0],
+      [400, 450, 1500, 760, 440, 0, 230, 135, 0, 68, 0, 20, 0],
+      [450, 500, 1650, 840, 480, 0, 230, 135, 0, 68, 0, 20, 0],
+      [500, 560, 0, 0, 0, 0, 260, 145, 0, 76, 0, 22, 0],
+      [560, 630, 0, 0, 0, 0, 260, 145, 0, 76, 0, 22, 0],
+      [630, 710, 0, 0, 0, 0, 290, 160, 0, 80, 0, 24, 0],
+      [710, 800, 0, 0, 0, 0, 290, 160, 0, 80, 0, 24, 0],
+      [800, 900, 0, 0, 0, 0, 320, 170, 0, 86, 0, 26, 0],
+      [900, 1000, 0, 0, 0, 0, 320, 170, 0, 86, 0, 26, 0],
+      [1000, 1120, 0, 0, 0, 0, 350, 195, 0, 98, 0, 28, 0],
+      [1120, 1250, 0, 0, 0, 0, 350, 195, 0, 98, 0, 28, 0],
+      [1250, 1400, 0, 0, 0, 0, 390, 220, 0, 110, 0, 30, 0],
+      [1400, 1600, 0, 0, 0, 0, 390, 220, 0, 110, 0, 30, 0],
+      [1600, 1800, 0, 0, 0, 0, 430, 240, 0, 120, 0, 32, 0],
+      [1800, 2000, 0, 0, 0, 0, 430, 240, 0, 120, 0, 32, 0],
+      [2000, 2240, 0, 0, 0, 0, 480, 260, 0, 130, 0, 34, 0],
+      [2240, 2500, 0, 0, 0, 0, 480, 260, 0, 130, 0, 34, 0],
+      [2500, 2800, 0, 0, 0, 0, 520, 290, 0, 145, 0, 38, 0],
+      [2800, 3150, 0, 0, 0, 0, 520, 290, 0, 145, 0, 38, 0]
+    ];
+
+
+    const holeDeviationsJ = [
+      [0, 3, 2.0, 4.0, 6.0],
+      [3, 6, 5.0, 6.0, 10.0],
+      [6, 10, 5.0, 8.0, 12.0],
+      [10, 14, 6.0, 10.0, 15.0],
+      [14, 18, 6.0, 10.0, 15.0],
+      [18, 24, 8.0, 12.0, 20.0],
+      [24, 30, 8.0, 12.0, 20.0],
+      [30, 40, 10.0, 14.0, 24.0],
+      [40, 50, 10.0, 14.0, 24.0],
+      [50, 65, 13.0, 18.0, 28.0],
+      [65, 80, 13.0, 18.0, 28.0],
+      [80, 100, 16.0, 22.0, 34.0],
+      [100, 120, 16.0, 22.0, 34.0],
+      [120, 140, 18.0, 26.0, 41.0],
+      [140, 160, 18.0, 26.0, 41.0],
+      [160, 180, 18.0, 26.0, 41.0],
+      [180, 200, 22.0, 30.0, 47.0],
+      [200, 225, 22.0, 30.0, 47.0],
+      [225, 250, 22.0, 30.0, 47.0],
+      [250, 280, 25.0, 36.0, 55.0],
+      [280, 315, 25.0, 36.0, 55.0],
+      [315, 355, 29.0, 39.0, 60.0],
+      [355, 400, 29.0, 39.0, 60.0],
+      [400, 450, 33.0, 43.0, 66.0],
+      [450, 500, 33.0, 43.0, 66.0]
+    ];
+
+
+    const holeCodesPZC = [
+      "P", "R", "S", "T", "U", "V", "X", "Y", "Z", "ZA", "ZB", "ZC"
+    ];
+    const holeDeviationsPZC = [
+      [0, 3, -6, -10, -14, 0, -18, 0, -20, 0, -26, -32, -40, -60],
+      [3, 6, -12, -15, -19, 0, -23, 0, -28, 0, -35, -42, -50, -80],
+      [6, 10, -15, -19, -23, 0, -28, 0, -34, 0, -42, -52, -67, -97],
+      [10, 14, -18, -23, -28, 0, -33, 0, -40, 0, -50, -64, -90, -130],
+      [14, 18, -18, -23, -28, 0, -33, -39, -45, 0, -60, -77, -108, -150],
+      [18, 24, -22, -28, -35, 0, -41, -47, -54, -63, -73, -98, -136, -188],
+      [24, 30, -22, -28, -35, -41, -48, -55, -64, -75, -88, -118, -160, -218],
+      [30, 40, -26, -34, -43, -48, -60, -68, -80, -94, -112, -148, -200, -274],
+      [40, 50, -26, -34, -43, -54, -70, -81, -97, -114, -136, -180, -242, -325],
+      [50, 65, -32, -41, -53, -66, -87, -102, -122, -144, -172, -226, -300, -405],
+      [65, 80, -32, -43, -59, -75, -102, -120, -146, -174, -210, -274, -360, -480],
+      [80, 100, -37, -51, -71, -91, -124, -146, -178, -214, -258, -335, -445, -585],
+      [100, 120, -37, -54, -79, -104, -144, -172, -210, -254, -310, -400, -525, -690],
+      [120, 140, -43, -63, -92, -122, -170, -202, -248, -300, -365, -470, -620, -800],
+      [140, 160, -43, -65, -100, -134, -190, -228, -280, -340, -415, -535, -700, -900],
+      [160, 180, -43, -68, -108, -146, -210, -252, -310, -380, -465, -600, -780, -1000],
+      [180, 200, -50, -77, -122, -166, -236, -284, -350, -425, -520, -670, -880, -1150],
+      [200, 225, -50, -80, -130, -180, -258, -310, -385, -470, -575, -740, -960, -1250],
+      [225, 250, -50, -84, -140, -196, -284, -340, -425, -520, -640, -820, -1050, -1350],
+      [250, 280, -56, -94, -158, -218, -315, -385, -475, -580, -710, -920, -1200, -1550],
+      [280, 315, -56, -98, -170, -240, -350, -425, -525, -650, -790, -1000, -1300, -1700],
+      [315, 355, -62, -108, -190, -268, -390, -475, -590, -730, -900, -1150, -1500, -1900],
+      [355, 400, -62, -114, -208, -294, -435, -530, -660, -820, -1000, -1300, -1650, -2100],
+      [400, 450, -68, -126, -232, -330, -490, -595, -740, -920, -1100, -1450, -1850, -2400],
+      [450, 500, -68, -132, -252, -360, -540, -660, -820, -1000, -1250, -1600, -2100, -2600],
+      [500, 560, -78, -150, -280, -400, -600, 0, 0, 0, 0, 0, 0, 0],
+      [560, 630, -78, -155, -310, -450, -660, 0, 0, 0, 0, 0, 0, 0],
+      [630, 710, -88, -175, -340, -500, -740, 0, 0, 0, 0, 0, 0, 0],
+      [710, 800, -88, -185, -380, -560, -840, 0, 0, 0, 0, 0, 0, 0],
+      [800, 900, -100, -210, -430, -620, -940, 0, 0, 0, 0, 0, 0, 0],
+      [900, 1000, -100, -220, -470, -680, -1050, 0, 0, 0, 0, 0, 0, 0],
+      [1000, 1120, -120, -250, -520, -780, -1150, 0, 0, 0, 0, 0, 0, 0],
+      [1120, 1260, -120, -260, -580, -840, -1300, 0, 0, 0, 0, 0, 0, 0],
+      [1260, 1400, -140, -300, -640, -960, -1450, 0, 0, 0, 0, 0, 0, 0],
+      [1400, 1600, -140, -330, -720, -1050, -1600, 0, 0, 0, 0, 0, 0, 0],
+      [1600, 1800, -170, -370, -820, -1200, -1850, 0, 0, 0, 0, 0, 0, 0],
+      [1800, 2000, -170, -400, -920, -1350, -2000, 0, 0, 0, 0, 0, 0, 0],
+      [2000, 2240, -195, -440, -1000, -1500, -2300, 0, 0, 0, 0, 0, 0, 0],
+      [2240, 2500, -195, -460, -1100, -1650, -2500, 0, 0, 0, 0, 0, 0, 0],
+      [2500, 2800, -240, -550, -1250, -1900, -2900, 0, 0, 0, 0, 0, 0, 0],
+      [2800, 3150, -240, -580, -1400, -2100, -3200, 0, 0, 0, 0, 0, 0, 0]
+    ];
+
+    const holeCodesKMN = [
+      "K", "M", "N"
+    ];
+    const holeDeviationsKMN = [
+      [0, 3, 0, -2, -4],
+      [3, 6, -1, -4, -8],
+      [6, 10, -1, -6, -10],
+      [10, 14, -1, -7, -12],
+      [14, 18, -1, -7, -12],
+      [18, 24, -2, -8, -15],
+      [24, 30, -2, -8, -15],
+      [30, 40, -2, -9, -17],
+      [40, 50, -2, -9, -17],
+      [50, 65, -2, -11, -20],
+      [65, 80, -2, -11, -20],
+      [80, 100, -3, -13, -23],
+      [100, 120, -3, -13, -23],
+      [120, 140, -3, -15, -27],
+      [140, 160, -3, -15, -27],
+      [160, 180, -3, -15, -27],
+      [180, 200, -4, -17, -31],
+      [200, 225, -4, -17, -31],
+      [225, 250, -4, -17, -31],
+      [250, 280, -4, -20, -34],
+      [280, 315, -4, -20, -34],
+      [315, 355, -4, -21, -37],
+      [355, 400, -4, -21, -37],
+      [400, 450, -5, -23, -40],
+      [450, 500, -5, -23, -40],
+      [500, 630, 0, -26, -44],
+      [630, 800, 0, -30, -50],
+      [800, 1000, 0, -34, -56],
+      [1000, 1250, 0, -40, -66],
+      [1250, 1600, 0, -48, -78],
+      [1600, 2000, 0, -58, -92],
+      [2000, 2500, 0, -68, -110],
+      [2500, 3150, 0, -76, -135],
+    ];
+
+    const detas = [
+      [0, 3, 0, 0, 0, 0, 0, 0],
+      [3, 6, 1.0, 1.5, 1, 3, 4, 6],
+      [6, 10, 1.0, 1.5, 2, 3, 6, 7],
+      [10, 14, 1.0, 2.0, 3, 3, 7, 9],
+      [14, 18, 1.0, 2.0, 3, 3, 7, 9],
+      [18, 24, 1.5, 2.0, 3, 4, 8, 12],
+      [24, 30, 1.5, 2.0, 3, 4, 8, 12],
+      [30, 40, 1.5, 3.0, 4, 5, 9, 14],
+      [40, 50, 1.5, 3.0, 4, 5, 9, 14],
+      [50, 65, 2.0, 3.0, 5, 6, 11, 16],
+      [65, 80, 2.0, 3.0, 5, 6, 11, 16],
+      [80, 100, 2.0, 4.0, 5, 7, 13, 19],
+      [100, 120, 2.0, 4.0, 5, 7, 13, 19],
+      [120, 140, 3.0, 4.0, 6, 7, 15, 23],
+      [140, 160, 3.0, 4.0, 6, 7, 15, 23],
+      [160, 180, 3.0, 4.0, 6, 7, 15, 23],
+      [180, 200, 3.0, 4.0, 6, 9, 17, 26],
+      [200, 225, 3.0, 4.0, 6, 9, 17, 26],
+      [225, 250, 3.0, 4.0, 6, 9, 17, 26],
+      [250, 280, 4.0, 4.0, 7, 9, 20, 29],
+      [280, 315, 4.0, 4.0, 7, 9, 20, 29],
+      [315, 355, 4.0, 5.0, 7, 11, 21, -32],
+      [355, 400, 4.0, 5.0, 7, 11, 21, -32],
+      [400, 450, 5.0, 5.0, 7, 13, 23, 34],
+      [450, 500, 5.0, 5.0, 7, 13, 23, 34]
+    ];
+
+    // ================== 核心计算逻辑增强 ==================
+    function calculateToleranceLimits (size, toleranceClass) {
+      const [_, letters, itNum] = toleranceClass.match(/([A-Za-z]+)(\d+)/);
+      const itGrade = 'IT' + itNum;
+      const tolerance = calculateStandardTolerance(size, itGrade);
+
+      //console.log("tolerance:", tolerance, letters, itNum)
+      let lower = 0, upper = 0;
+
+
+      const isShaft = letters === letters.toLowerCase()
+      if (isShaft) {
+        const codeIndex = shaftCodes.indexOf(letters);
+        if (codeIndex >= 0) {
+          const sizeIndex = shaftDeviations.findIndex(r => size > r[0] && size <= r[1]);
+          const baseDeviation = shaftDeviations[sizeIndex][codeIndex + 2] / 1000;
+          if (codeIndex <= 10) {  // es
+            upper = baseDeviation;
+            lower = baseDeviation - tolerance;
+          } else {
+            upper = baseDeviation + tolerance;
+            lower = baseDeviation;
+
+          }
+
+        } else if (letters === "js") {
+          upper = tolerance / 2;
+          lower = -tolerance / 2;
+        } else if (letters === "j") {
+          const sizeIndex = shaftDeviationsJ.findIndex(r => size > r[0] && size <= r[1]);
+          if (itNum == 5 || itNum == 6) {
+            lower = shaftDeviationsJ[sizeIndex][2] / 1000;
+            upper = lower + tolerance;
+          } else if (itNum == 7) {
+            lower = shaftDeviationsJ[sizeIndex][3] / 1000;
+            upper = lower + tolerance;
+          }
+        } else if (letters === "k") {
+          if (itNum >= 4 && itNum <= 7) {
+            const sizeIndex = shaftDeviationsK.findIndex(r => size > r[0] && size <= r[1]);
+            lower = shaftDeviationsK[sizeIndex][2] / 1000;
+            upper = lower + tolerance;
+          } else {
+            lower = 0
+            upper = lower + tolerance;
+          }
+        }
+
+      } else { // hole
+        let codeIndex = holeCodes.indexOf(letters);
+        if (codeIndex >= 0) {
+          const sizeIndex = holeDeviations.findIndex(r => size > r[0] && size <= r[1]);
+          const baseDeviation = holeDeviations[sizeIndex][codeIndex + 2] / 1000;
+          upper = baseDeviation + tolerance;
+          lower = baseDeviation;
+        } else if (letters === "Js") {
+          upper = tolerance / 2;
+          lower = -tolerance / 2;
+        } else if (letters === "J") {
+          const sizeIndex = holeDeviationsJ.findIndex(r => size > r[0] && size <= r[1]);
+          if (itNum >= 6 && itNum <= 8 && sizeIndex >= 0) {
+            upper = holeDeviationsJ[sizeIndex][itNum - 4] / 1000;
+            lower = upper - tolerance;
+          }
+        } else if (letters === "K" || letters === "M" || letters === "N") {
+          const sizeIndex = holeDeviationsKMN.findIndex(r => size > r[0] && size <= r[1]);
+          if (size > 500) {
+            upper = holeDeviationsKMN[sizeIndex][holeCodesKMN.indexOf(letters) + 2] / 1000;
+            lower = upper - tolerance;
+          } else if (itNum <= 8) {
+
+            if (sizeIndex >= 0 && itNum >= 3 && itNum <= 8) {
+              upper = holeDeviationsKMN[sizeIndex][holeCodesKMN.indexOf(letters) + 2] / 1000;
+              upper += detas[sizeIndex][itNum - 1] / 1000
+              lower = upper - tolerance;
+            }
+          } else if (letters === "M") {
+            if (sizeIndex >= 0) {
+              upper = holeDeviationsKMN[sizeIndex][holeCodesKMN.indexOf(letters) + 2] / 1000;
+              lower = upper - tolerance;
+            }
+          } else if (letters === "N") {
+            if (sizeIndex == 0) {
+              upper = -4 / 1000;
+              lower = upper - tolerance;
+            } else {
+              upper = 0;
+              lower = upper - tolerance;
+            }
+          }
+        } else {
+          codeIndex = holeCodesPZC.indexOf(letters);
+          if (codeIndex >= 0) {
+            let sizeIndex = holeDeviationsPZC.findIndex(r => size > r[0] && size <= r[1]);
+            if (itNum > 7) {
+              upper = holeDeviationsPZC[sizeIndex][codeIndex + 2] / 1000;
+            } else {
+              upper = holeDeviationsPZC[sizeIndex][codeIndex + 2] / 1000;
+              sizeIndex = detas.findIndex(r => size > r[0] && size <= r[1]);
+              if (sizeIndex >= 0 && itNum >= 3 && itNum <= 7) {
+                upper += detas[sizeIndex][itNum - 1] / 1000
+              }
+            }
+            lower = upper - tolerance;
+          }
+        }
+      }
+
+
+
+
+
+
+
+      return {
+        tolerance,
+        lowerDeviation: Number(lower.toFixed(4)),
+        upperDeviation: Number(upper.toFixed(4))
+      };
+    }
+
+
+
+  </script>
+
+
+  <style>
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+
+    }
+
+    #shaft-table table,
+    #hole-table table {
+      table-layout: fixed;
+    }
+
+    td {
+      display: table-cell;
+      vertical-align: inherit;
+      unicode-bidi: isolate;
+      text-align: center;
+      padding: 2px;
+      width: 25px;
+      height: 30px;
+      font-size: 12px;
+      vertical-align: middle;
+    }
+
+    .cell1 {
+      font-weight: bold;
+      border-right: #3399ff 1px solid;
+      border-top: #3399ff 1px solid;
+      border-left: #3399ff 1px solid;
+      border-bottom: #3399ff 1px solid;
+      cursor: pointer;
+    }
+
+    .cell2 {
+      background-color: #33ffff;
+      font-weight: bold;
+      border-right: #3399ff 1px solid;
+      border-top: #3399ff 1px solid;
+      border-left: #3399ff 1px solid;
+      border-bottom: #3399ff 1px solid;
+      cursor: pointer;
+    }
+
+
+    .cell3 {
+      background-color: #0033ff;
+      color: #ffffff;
+      font-weight: bold;
+      border-right: #3399ff 1px solid;
+      border-top: #3399ff 1px solid;
+      border-left: #3399ff 1px solid;
+      border-bottom: #3399ff 1px solid;
+      cursor: pointer;
+    }
+
+
+    .cellborder {
+      border-right: black 1pt solid;
+      border-top: black 1pt solid;
+      border-left: black 1pt solid;
+      border-bottom: black 1pt solid;
+    }
+
+    .container {
+      width: auto;
+      max-width: 1200px;
+      padding-left: 15px;
+      padding-right: 15px;
+      margin: 0 auto;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      margin-block-start: .5rem;
+      margin-block-end: 1rem;
+      font-weight: 500;
+    }
+
+    h1 {
+      color: rgb(60, 59, 62);
+      font-size: 36px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    h2 {
+      font-size: 28px;
+      font-weight: 700;
+      text-transform: capitalize;
+      word-spacing: 1.6px;
+      color: rgb(60, 59, 62);
+      padding-top: 30px;
+      margin-block-start: 0;
+      margin-block-end: 12px;
+    }
+
+    h3 {
+      padding-top: 30px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    h4 {
+      padding-top: 30px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    a {
+      text-decoration: none;
+      color: #000;
+    }
+
+    .tabs {
+      margin: 20px 0;
+    }
+
+    .tabs a {
+      color: #b6b6b6;
+      padding: 10px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .tabs a.active {
+      background: #ff77164d;
+      color: #ff7716;
+      cursor: default;
+    }
+
+    .tabs .tabs-body {
+      display: flex;
+      line-height: 30px;
+      gap: 24px;
+    }
+
+    .tabs .tabs-border-bottom {
+      height: 3px;
+      background: linear-gradient(90deg, #ff7716 0, rgba(255, 119, 22, 0) 100%);
+    }
+
+    .tab-item {
+      display: none;
+      max-width: 600px;
+      margin: 0 auto;
+      overflow: auto;
+    }
+
+
+    .tab-item.active {
+      display: block;
+    }
+
+    .input {
+      font-size: 20px;
+      padding: 2px;
+      border: 0;
+      border-bottom: 1px solid;
+      text-align: right;
+      outline: none;
+      max-width: 100px;
+      color: #ff7b00;
+      pointer-events: all
+    }
+
+    .input-readony {
+      font-size: 20px;
+      padding: 2px;
+      border: 0;
+      outline: none;
+      max-width: 100px;
+      text-align: center;
+    }
+
+    .disabled {
+      pointer-events: none;
+      /* 禁止鼠标事件 */
+      /* 降低透明度，看起来像是不可用 */
+      cursor: not-allowed;
+      /* 更改鼠标指针样式 */
+    }
+
+    .disabled td {
+      color: #ff7b00;
+    }
+
+    .canvas-container {
+      display: flex;
+      margin-top: 20px;
+      align-items: start;
+      gap: 20px;
+    }
+
+    .code-select {
+      display: flex;
+      font-size: 15px;
+    }
+
+    @media (max-width: 768px) {
+      .tabs .tabs-body {
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .canvas-container {
+        gap: 50px;
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+
+
+
+
+<body>
+  <div class="container">
+
+
+    <h1>ISO 286 Fit Calculator: Calculate Hole and Shaft Limits & Fits</h1>
+
+    <ul class="tabs" id="tabs">
+      <div class="tabs-body">
+        <a href="#shaft" id="shaft-tab" class="active">Shaft Deviation</a>
+        <a href="#hole" id="hole-tab">Hole Deviation</a>
+        <a href="#hole-basic-system" id="hole-basic-system-tab">Hole basic system</a>
+        <a href="#shaft-basic-system" id="shaft-basic-system-tab">Shaft basic system</a>
+        <a href="#tolerance-fits-chart" id="tolerance-fits-chart-tab">Tolerance fits Chart</a>
+      </div>
+      <div class="tabs-border-bottom"></div>
+    </ul>
+    <div class="tab-item " id="shaft-table">
+      <table border="0" cellspacing="0" cellpadding="0" width="100%">
+        <tbody>
+
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              h1</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              js1</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              h2</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              js2</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              h3</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              js3</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              g4</td>
+            <td class="cell1" style="color: navy;">
+              h4</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              js4</td>
+            <td class="cell1" style="color: navy;">
+              k4</td>
+            <td class="cell1" style="color: navy;">
+              m4</td>
+            <td class="cell1" style="color: navy;">
+              n4</td>
+            <td class="cell1" style="color: navy;">
+              p4</td>
+            <td class="cell1" style="color: navy;">
+              r4</td>
+            <td class="cell1" style="color: navy;">
+              s4</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell2" style="color: navy;">
+              f5</td>
+            <td class="cell2" style="color: navy;">
+              g5</td>
+            <td class="cell2" style="color: navy;">
+              h5</td>
+            <td class="cell1" style="color: navy;">
+              j5</td>
+            <td class="cell2" style="color: navy;">
+              js5</td>
+            <td class="cell2" style="color: navy;">
+              k5</td>
+            <td class="cell2" style="color: navy;">
+              m5</td>
+            <td class="cell2" style="color: navy;">
+              n5</td>
+            <td class="cell2" style="color: navy;">
+              p5</td>
+            <td class="cell2" style="color: navy;">
+              r5</td>
+            <td class="cell2" style="color: navy;">
+              s5</td>
+            <td class="cell2" style="color: navy;">
+              t5</td>
+            <td class="cell1" style="color: navy;">
+              u5</td>
+            <td class="cell1" style="color: navy;">
+              v5</td>
+            <td class="cell1" style="color: navy;">
+              x5</td>
+            <td class="cell1" style="color: navy;">
+              y5</td>
+            <td class="cell1" style="color: navy;">
+              z5</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              e6</td>
+            <td class="cell2" style="color: navy;">
+              f6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              g6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);" id="shafth6">
+              h6</td>
+            <td class="cell1" style="color: navy;">
+              j6</td>
+            <td class="cell2" style="color: navy;">
+              js6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              k6</td>
+            <td class="cell2" style="color: navy;">
+              m6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              n6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              p6</td>
+            <td class="cell2" style="color: navy;">
+              r6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              s6</td>
+            <td class="cell2" style="color: navy;">
+              t6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              u6</td>
+            <td class="cell2" style="color: navy;">
+              v6</td>
+            <td class="cell2" style="color: navy;">
+              x6</td>
+            <td class="cell2" style="color: navy;">
+              y6</td>
+            <td class="cell2" style="color: navy;">
+              z6</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              d7</td>
+            <td class="cell2" style="color: navy;">
+              e7</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              f7</td>
+            <td class="cell1" style="color: navy;">
+              g7</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              h7</td>
+            <td class="cell1" style="color: navy;">
+              j7</td>
+            <td class="cell2" style="color: navy;">
+              js7</td>
+            <td class="cell2" style="color: navy;">
+              k7</td>
+            <td class="cell2" style="color: navy;">
+              m7</td>
+            <td class="cell2" style="color: navy;">
+              n7</td>
+            <td class="cell2" style="color: navy;">
+              p7</td>
+            <td class="cell2" style="color: navy;">
+              r7</td>
+            <td class="cell2" style="color: navy;">
+              s7</td>
+            <td class="cell2" style="color: navy;">
+              t7</td>
+            <td class="cell2" style="color: navy;">
+              u7</td>
+            <td class="cell1" style="color: navy;">
+              v7</td>
+            <td class="cell1" style="color: navy;">
+              x7</td>
+            <td class="cell1" style="color: navy;">
+              y7</td>
+            <td class="cell1" style="color: navy;">
+              z7</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              c8</td>
+            <td class="cell2" style="color: navy;">
+              d8</td>
+            <td class="cell2" style="color: navy;">
+              e8</td>
+            <td class="cell2" style="color: navy;">
+              f8</td>
+            <td class="cell1" style="color: navy;">
+              g8</td>
+            <td class="cell2" style="color: navy;">
+              h8</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              js8</td>
+            <td class="cell1" style="color: navy;">
+              k8</td>
+            <td class="cell1" style="color: navy;">
+              m8</td>
+            <td class="cell1" style="color: navy;">
+              n8</td>
+            <td class="cell1" style="color: navy;">
+              p8</td>
+            <td class="cell1" style="color: navy;">
+              r8</td>
+            <td class="cell1" style="color: navy;">
+              s8</td>
+            <td class="cell1" style="color: navy;">
+              t8</td>
+            <td class="cell1" style="color: navy;">
+              u8</td>
+            <td class="cell1" style="color: navy;">
+              v8</td>
+            <td class="cell1" style="color: navy;">
+              x8</td>
+            <td class="cell1" style="color: navy;">
+              y8</td>
+            <td class="cell1" style="color: navy;">
+              z8</td>
+          </tr>
+          <tr>
+            <td class="cell1" style="color: navy;">
+              a9</td>
+            <td class="cell1" style="color: navy;">
+              b9</td>
+            <td class="cell2" style="color: navy;">
+              c9</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              d9</td>
+            <td class="cell2" style="color: navy;">
+              e9</td>
+            <td class="cell2" style="color: navy;">
+              f9</td>
+            <td></td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              h9</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              js9</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="cell1" style="color: navy;">
+              a10</td>
+            <td class="cell1" style="color: navy;">
+              b10</td>
+            <td class="cell2" style="color: navy;">
+              c10</td>
+            <td class="cell2" style="color: navy;">
+              d10</td>
+            <td class="cell1" style="color: navy;">
+              e10</td>
+            <td></td>
+            <td></td>
+            <td class="cell2" style="color: navy;">
+              h10</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              js10</td>
+            <td style="vertical-align:top" colspan="12" rowspan="4" class="disabled">
+              <table border="0" cellspacing="0" cellpadding="0" width="100%" height="100%">
+                <tbody>
+                  <tr>
+                    <td style="text-align:right; padding-left:20px" rowspan="2" nowrap>
+                      Nominal size:</td>
+                    <td rowspan="2">
+                      <div style="display: flex;gap:10px">
+                        <input id="shaftDimension" type="number" max="3150" min="0" type="text" style="width:70px"
+                          value="100" class="input">
+                        <div style="font-size:25px;text-align: right;" readonly class="input-readony"
+                          id="shaftDeviationCode" type="text">
+                        </div>
+
+                    </td>
+
+                    <td>
+                      <div id="shaftUpperDeviation" readonly type="text" class="input-readony">
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div id="shaftLowerDeviation" readonly type="text" class="input-readony">
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="1" style="text-align: right;padding-left:20px ">
+                      Stand Tolerance:</td>
+                    <td colspan="2">
+                      <div id="shaftTolerance" type="text" class="input-readony">
+                    </td>
+                  </tr>
+
+                </tbody>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="cell2" style="color: navy;">
+              a11</td>
+            <td class="cell2" style="color: navy;">
+              b11</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              c11</td>
+            <td class="cell2" style="color: navy;">
+              d11</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              h11</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              js11</td>
+
+          </tr>
+          <tr>
+            <td class="cell1" style="color: navy;">
+              a12</td>
+            <td class="cell2" style="color: navy;">
+              b12</td>
+            <td class="cell1" style="color: navy;">
+              c12</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell2" style="color: navy;">
+              h12</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              js12</td>
+
+          </tr>
+          <tr>
+            <td class="cell1" style="color: navy;">
+              a13</td>
+            <td class="cell1" style="color: navy;">
+              b13</td>
+            <td class="cell1" style="color: navy;">
+              c13</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              h13</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              js13</td>
+
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+    <div class="tab-item" id="hole-table">
+      <table border="0" cellspacing="0" cellpadding="0" width="100%">
+        <tbody>
+
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              H1</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              Js1</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              H2</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              Js2</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              H3</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              Js3</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>
+            </td>
+            <td class="cell1" style="color: navy;">
+              H4</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              Js4</td>
+            <td class="cell1" style="color: navy;">
+              K4</td>
+            <td class="cell1" style="color: navy;">
+              M4</td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              G5</td>
+            <td class="cell2" style="color: navy;">
+              H5</td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              Js5</td>
+            <td class="cell2" style="color: navy;">
+              K5</td>
+            <td class="cell2" style="color: navy;">
+              M5</td>
+            <td class="cell2" style="color: navy;">
+              N5</td>
+            <td class="cell2" style="color: navy;">
+              P5</td>
+            <td class="cell2" style="color: navy;">
+              R5</td>
+            <td class="cell2" style="color: navy;">
+              S5</td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              F6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              G6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);" id="holeH6">
+              H6</td>
+            <td class="cell1" style="color: navy;">
+              J6</td>
+            <td class="cell2" style="color: navy;">
+              Js6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              K6</td>
+            <td class="cell2" style="color: navy;">
+              M6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              N6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              P6</td>
+            <td class="cell2" style="color: navy;">
+              R6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              S6</td>
+            <td class="cell2" style="color: navy;">
+              T6</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              U6</td>
+            <td class="cell2" style="color: navy;">
+              V6</td>
+            <td class="cell2" style="color: navy;">
+              X6</td>
+            <td class="cell2" style="color: navy;">
+              Y6</td>
+            <td class="cell2" style="color: navy;">
+              Z6</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              D7</td>
+            <td class="cell2" style="color: navy;">
+              E7</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              F7</td>
+            <td class="cell1" style="color: navy;">
+              G7</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              H7</td>
+            <td class="cell1" style="color: navy;">
+              J7</td>
+            <td class="cell2" style="color: navy;">
+              Js7</td>
+            <td class="cell2" style="color: navy;">
+              K7</td>
+            <td class="cell2" style="color: navy;">
+              M7</td>
+            <td class="cell2" style="color: navy;">
+              N7</td>
+            <td class="cell2" style="color: navy;">
+              P7</td>
+            <td class="cell2" style="color: navy;">
+              R7</td>
+            <td class="cell2" style="color: navy;">
+              S7</td>
+            <td class="cell2" style="color: navy;">
+              T7</td>
+            <td class="cell2" style="color: navy;">
+              U7</td>
+            <td class="cell1" style="color: navy;">
+              V7</td>
+            <td class="cell1" style="color: navy;">
+              X7</td>
+            <td class="cell1" style="color: navy;">
+              Y7</td>
+            <td class="cell1" style="color: navy;">
+              Z7</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              C8</td>
+            <td class="cell2" style="color: navy;">
+              D8</td>
+            <td class="cell2" style="color: navy;">
+              E8</td>
+            <td class="cell2" style="color: navy;">
+              F8</td>
+            <td class="cell1" style="color: navy;">
+              G8</td>
+            <td class="cell2" style="color: navy;">
+              H8</td>
+            <td class="cell1" style="color: navy;">J8</td>
+            <td class="cell1" style="color: navy;">
+              Js8</td>
+            <td class="cell1" style="color: navy;">
+              K8</td>
+            <td class="cell1" style="color: navy;">
+              M8</td>
+            <td class="cell1" style="color: navy;">
+              N8</td>
+            <td class="cell1" style="color: navy;">
+              P8</td>
+            <td class="cell1" style="color: navy;">
+              R8</td>
+            <td class="cell1" style="color: navy;">
+              S8</td>
+            <td class="cell1" style="color: navy;">
+              T8</td>
+            <td class="cell1" style="color: navy;">
+              U8</td>
+            <td class="cell1" style="color: navy;">
+              V8</td>
+            <td class="cell1" style="color: navy;">
+              X8</td>
+            <td class="cell1" style="color: navy;">
+              Y8</td>
+            <td class="cell1" style="color: navy;">
+              Z8</td>
+          </tr>
+          <tr>
+            <td class="cell1" style="color: navy;">
+              A9</td>
+            <td class="cell1" style="color: navy;">
+              B9</td>
+            <td class="cell2" style="color: navy;">
+              C9</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              D9</td>
+            <td class="cell2" style="color: navy;">
+              E9</td>
+            <td class="cell2" style="color: navy;">
+              F9</td>
+            <td></td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              H9</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              Js9</td>
+            <td></td>
+            <td></td>
+            <td class="cell1">
+              N9</td>
+            <td class="cell1">
+              P9</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="cell1" style="color: navy;">
+              A10</td>
+            <td class="cell1" style="color: navy;">
+              B10</td>
+            <td class="cell2" style="color: navy;">
+              C10</td>
+            <td class="cell2" style="color: navy;">
+              D10</td>
+            <td class="cell1" style="color: navy;">
+              E10</td>
+            <td></td>
+            <td></td>
+            <td class="cell2" style="color: navy;">
+              H10</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              Js10</td>
+            <td style="vertical-align:top" colspan="12" rowspan="4" class="disabled">
+              <table border="0" cellspacing="0" cellpadding="0" width="100%" height="100%">
+                <tbody>
+                  <tr>
+                    <td style="text-align:right; padding-left:20px" rowspan="2" nowrap>
+                      Nominal size:</td>
+                    <td rowspan="2">
+                      <div style="display: flex;gap:10px">
+                        <input id="holeDimension" type="number" max="3150" min="0" style="width:70px" value="100"
+                          class="input">
+                        <div style="font-size:25px;text-align: right;" readonly class="input-readony"
+                          id="holeDeviationCode" type="text">
+                        </div>
+
+                    </td>
+
+                    <td>
+                      <div id="holeUpperDeviation" readonly type="text" class="input-readony">
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div id="holeLowerDeviation" readonly type="text" class="input-readony">
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="1" style="text-align: right;padding-left:20px ">
+                      Stand Tolerance:</td>
+                    <td colspan="2">
+                      <div id="holeTolerance" type="text" class="input-readony">
+                    </td>
+                  </tr>
+
+                </tbody>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="cell2" style="color: navy;">
+              A11</td>
+            <td class="cell2" style="color: navy;">
+              B11</td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              C11</td>
+            <td class="cell2" style="color: navy;">
+              D11</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              H11</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              Js11</td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="cell1" style="color: navy;">
+              A12</td>
+            <td class="cell2" style="color: navy;">
+              B12</td>
+            <td class="cell1" style="color: navy;">
+              C12</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell2" style="color: navy;">
+              H12</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              Js12</td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="cell1">
+              H13</td>
+            <td></td>
+            <td class="cell1" style="color: navy;">
+              Js13</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr style="height:10px">
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td style="width: 30px">
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tab-item" id="hole-basic-system-table">
+      <table border="0" cellspacing="0" cellpadding="0" width="100%">
+        <tbody>
+
+          <tr style="height:25px">
+            <td class="cellborder" rowspan="3" style="width: 30px">
+              Basic<br>
+              Hole<br>
+            <td colspan="21" class="cellborder">
+              Shaft</td>
+          </tr>
+          <tr style="height:25px">
+            <td class="cellborder">
+              a</td>
+            <td class="cellborder">
+              b</td>
+            <td class="cellborder">
+              c</td>
+            <td class="cellborder">
+              d</td>
+            <td class="cellborder">
+              e</td>
+            <td class="cellborder">
+              f</td>
+            <td class="cellborder">
+              g</td>
+            <td class="cellborder">
+              h</td>
+            <td class="cellborder" style="border-left: red 2pt solid">
+              js</td>
+            <td class="cellborder">
+              k</td>
+            <td class="cellborder">
+              m</td>
+            <td class="cellborder" style="border-left: red 2pt solid">
+              n</td>
+            <td class="cellborder">
+              p</td>
+            <td class="cellborder">
+              r</td>
+            <td class="cellborder">
+              s</td>
+            <td class="cellborder">
+              t</td>
+            <td class="cellborder">
+              u</td>
+            <td class="cellborder">
+              v</td>
+            <td class="cellborder">
+              x</td>
+            <td class="cellborder">
+              y</td>
+            <td class="cellborder">
+              z</td>
+          </tr>
+          <tr style="height:25px">
+            <td colspan="8" class="cellborder">
+              Clearance Fit</td>
+            <td colspan="3" class="cellborder" style="border-left: red 2pt solid">
+              Transition Fit</td>
+            <td colspan="10" class="cellborder" style="border-left: red 2pt solid">
+              Interference Fit</td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              H6</td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H6</span><br><span>f5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H6</span><br><span>g5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H6</span><br><span>h5</span>
+            </td>
+            <td class="cell2" style="border-left: 2pt solid red; color: navy;">
+              <span style="text-decoration: underline">H6</span><br><span>js5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H6</span><br><span>k5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H6</span><br><span>m5</span>
+            </td>
+            <td class="cell2" style="border-left: 2pt solid red; border-bottom: 2pt solid red; color: navy;">
+              <span style="text-decoration: underline">H6</span><br><span>n5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H6</span><br><span>p5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H6</span><br><span>r5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H6</span><br><span>s5</span>
+            </td>
+            <td class="cell2" id="Td7" style="color: navy;">
+              <span style="text-decoration: underline">H6</span><br><span>t5</span>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td style="border-right: black 1pt solid">
+            </td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              H7</td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H7</span><br><span>f6</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H7</span><br><span>g6</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);" id="hbH7h6">
+              <span style="text-decoration: underline">H7</span><br><span>h6</span>
+            </td>
+            <td class="cell2" style="border-left: 2pt solid red; color: navy;">
+              <span style="text-decoration: underline">H7</span><br><span>js6</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H7</span><br><span>k6</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H7</span><br><span>m6</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H7</span><br><span>n6</span>
+            </td>
+            <td class="cell3"
+              style="border-left: 2pt solid red; border-bottom: 2pt solid red; color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H7</span><br><span>p6</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H7</span><br><span>r6</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H7</span><br><span>s6</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H7</span><br><span>t6</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H7</span><br><span>u6</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H7</span><br><span>v6</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H7</span><br><span>x6</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H7</span><br><span>y6</span>
+            </td>
+            <td class="cell2" style="border-right: 1pt solid black; color: navy;">
+              <span style="text-decoration: underline">H7</span><br><span>z6</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="cellborder" rowspan="2">
+              H8</td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>e7</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H8</span><br><span>f7</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>g7</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H8</span><br><span>h7</span>
+            </td>
+            <td class="cell2" style="border-left: 2pt solid red; color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>js7</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>k7</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>m7</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>n7</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>p7</span>
+            </td>
+            <td class="cell2" style="border-left: 2pt solid red; color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>r7</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>s7</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>t7</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>u7</span>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td style="border-right: black 1pt solid">
+            </td>
+          </tr>
+          <tr>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>d8</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>e8</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>f8</span>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>h8</span>
+            </td>
+            <td colspan="13" rowspan="4" class="disabled"
+              style="border-right: black 1pt solid; border-top: black 1pt solid; border-left: red 2pt solid">
+              <table>
+                <tbody>
+                  <tr>
+                    <td style="text-align: right; width: 65px;" rowspan="4" nowrap>
+                      Nominal size:</td>
+                    <td style="width: 70px" rowspan="4">
+                      <input id="hbDimension" value="100" type="text" style="width:60px" class="input">
+                    </td>
+                    <td rowspan="2" style="width: 34px; text-align: right">
+                      <div style="width: 25px;font-size:25px;" class="input-readonly" id="hbHoleDeviationCode">
+                    </td>
+                    <td>
+                      <div style="width: 60px;" class="input-readonly" id="hbHoleUpperDeviation"></div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div style="width: 60px" class="input-readonly" id="hbHoleLowerDeviation"></div>
+                    </td>
+                  </tr>
+                  <tr style="height:10px">
+                    <td style="width: 34px; text-align: right; border-top: black 1pt solid;" rowspan="2">
+                      <div style="width: 25px;font-size:25px;" class="input-readonly" id="hbShaftDeviationCode">
+                    </td>
+                    <td style="text-align: left; border-top: black 1pt solid;">
+                      <div style="width: 60px" class="input-readonly" id="hbShaftUpperDeviation"></div>
+                    </td>
+                  </tr>
+                  <tr id="Tr1">
+                    <td style="text-align: left">
+                      <div style="width: 60px" class="input-readonly" id="hbShaftLowerDeviation"></div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              H9</td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H9</span><br><span>c9</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H9</span><br><span>d9</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H9</span><br><span>e9</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H9</span><br><span>f9</span>
+            </td>
+            <td>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H9</span><br><span>h9</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              H10</td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H10</span><br><span>c10</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H10</span><br><span>d10</span>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H10</span><br><span>h10</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              H11</td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H11</span><br><span>a11</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H11</span><br><span>b11</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H11</span><br><span>c11</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H11</span><br><span>d11</span>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H11</span><br><span>h11</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              H12</td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td class="cell2" style="border-bottom: 1pt solid black; color: navy;">
+              <span style="text-decoration: underline">H12</span><br><span>b12</span>
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td class="cell2" style="border-bottom: 1pt solid black; color: navy;">
+              <span style="text-decoration: underline">H12</span><br><span>h12</span>
+            </td>
+            <td style="border-left: red 2pt solid; border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+
+            </td>
+            <td colspan="2" style="border-bottom: black 1pt solid"></td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+
+            </td>
+            <td colspan="2" style="border-bottom: black 1pt solid"></td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-right: black 1pt solid; border-bottom: black 1pt solid">
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tab-item" id="shaft-basic-system-table">
+
+      <table border="0" cellspacing="0" cellpadding="0" width="100%">
+        <tbody>
+
+          <tr style="height:25px">
+            <td class="cellborder" rowspan="3" style="width: 30px">
+              Basic<br>
+              Shaft</td>
+            <td colspan="21" class="cellborder" style="width: 25px; text-align: center;">
+              Hole</td>
+          </tr>
+          <tr style="height:25px">
+            <td class="cellborder">
+              A</td>
+            <td class="cellborder">
+              B</td>
+            <td class="cellborder">
+              C</td>
+            <td class="cellborder">
+              D</td>
+            <td class="cellborder">
+              E</td>
+            <td class="cellborder">
+              F</td>
+            <td class="cellborder">
+              G</td>
+            <td class="cellborder">
+              H</td>
+            <td class="cellborder" style="border-left: red 2pt solid">
+              Js</td>
+            <td class="cellborder">
+              K</td>
+            <td class="cellborder">
+              M</td>
+            <td class="cellborder" style="border-left: red 2pt solid">
+              N</td>
+            <td class="cellborder">
+              P</td>
+            <td class="cellborder">
+              R</td>
+            <td class="cellborder">
+              S</td>
+            <td class="cellborder">
+              T</td>
+            <td class="cellborder">
+              U</td>
+            <td class="cellborder" style="width: 30px">
+              V</td>
+            <td class="cellborder" style="width: 30px">
+              X</td>
+            <td class="cellborder" style="width: 30px">
+              Y</td>
+            <td class="cellborder" style="width: 30px">
+              Z</td>
+          </tr>
+          <tr style="height:25px">
+            <td colspan="8" class="cellborder">
+              Clearance Fit</td>
+            <td colspan="3" class="cellborder" style="border-left: red 2pt solid">
+              Transition Fit</td>
+            <td colspan="10" class="cellborder" style="border-left: red 2pt solid">
+              Interference Fit</td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              h5</td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">F6</span><br><span>h5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">G6</span><br><span>h5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H6</span><br><span>h5</span>
+            </td>
+            <td class="cell2" style="border-left: 2pt solid red; color: navy;">
+              <span style="text-decoration: underline">Js6</span><br><span>h5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">K6</span><br><span>h5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">M6</span><br><span>h5</span>
+            </td>
+            <td class="cell2" style="border-left: 2pt solid red; border-bottom: 2pt solid red; color: navy;">
+              <span style="text-decoration: underline">N6</span><br><span>h5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">P6</span><br><span>h5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">R6</span><br><span>h5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">S6</span><br><span>h5</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">T6</span><br><span>h5</span>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td style="width: 26px">
+            </td>
+            <td>
+            </td>
+            <td style="border-right: black 1pt solid">
+            </td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              h6</td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">F7</span><br><span>h6</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">G7</span><br><span>h6</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);" id="sbH7h6">
+              <span style="text-decoration: underline">H7</span><br><span>h6</span>
+            </td>
+            <td class="cell2" style="border-left: 2pt solid red; color: navy;">
+              <span style="text-decoration: underline">Js7</span><br><span>h6</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">K7</span><br><span>h6</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">M7</span><br><span>h6</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">N7</span><br><span>h6</span>
+            </td>
+            <td class="cell3" style="border-left: 2pt solid red; color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">P7</span><br><span>h6</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">R7</span><br><span>h6</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">S7</span><br><span>h6</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">T7</span><br><span>h6</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">U7</span><br><span>h6</span>
+            </td>
+            <td>
+            </td>
+            <td style="width: 26px">
+            </td>
+            <td>
+            </td>
+            <td style="border-right: black 1pt solid">
+            </td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              h7</td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">E8</span><br><span>h7</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">F8</span><br><span>h7</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">G8</span><br><span>h7</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H8</span><br><span>h7</span>
+            </td>
+            <td class="cell2" style="border-left: 2pt solid red; color: navy;">
+              <span style="text-decoration: underline">Js8</span><br><span>h7</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">K8</span><br><span>h7</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">M8</span><br><span>h7</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">N8</span><br><span>h7</span>
+            </td>
+            <td style="border-left: red 2pt solid">
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td style="width: 26px">
+            </td>
+            <td>
+            </td>
+            <td style="border-right: black 1pt solid">
+            </td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              h8</td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">D8</span><br><span>h8</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">E8</span><br><span>h8</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">F8</span><br><span>h8</span>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H8</span><br><span>h8</span>
+            </td>
+            <td colspan="13" rowspan="4" class="disabled"
+              style="border-right: black 1pt solid; border-top: black 1pt solid; border-left: red 2pt solid">
+              <table>
+                <tbody>
+                  <tr>
+                    <td style="text-align: right; width: 65px;" rowspan="4" nowrap>
+                      Nominal size:</td>
+                    <td style="width: 70px" rowspan="4">
+                      <input id="sbDimension" value="100" type="text" style="width:60px" class="input">
+                    </td>
+                    <td rowspan="2" style="width: 34px; text-align: right">
+                      <div style="width: 25px;font-size:25px;" class="input-readonly" id="sbHoleDeviationCode">
+                    </td>
+                    <td>
+                      <div style="width: 60px;" class="input-readonly" id="sbHoleUpperDeviation"></div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div style="width: 60px" class="input-readonly" id="sbHoleLowerDeviation"></div>
+                    </td>
+                  </tr>
+                  <tr style="height:10px">
+                    <td style="width: 34px; text-align: right; border-top: black 1pt solid;" rowspan="2">
+                      <div style="width: 25px;font-size:25px;" class="input-readonly" id="sbShaftDeviationCode">
+                    </td>
+                    <td style="text-align: left; border-top: black 1pt solid;">
+                      <div style="width: 60px" class="input-readonly" id="sbShaftUpperDeviation"></div>
+                    </td>
+                  </tr>
+                  <tr id="Tr1">
+                    <td style="text-align: left">
+                      <div style="width: 60px" class="input-readonly" id="sbShaftLowerDeviation"></div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              h9</td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">D9</span><br><span>h9</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">E9</span><br><span>h9</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">F9</span><br><span>h9</span>
+            </td>
+            <td>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H9</span><br><span>h9</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              h10</td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">D10</span><br><span>h10</span>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">H10</span><br><span>h10</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              h11</td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">A11</span><br><span>h11</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">B11</span><br><span>h11</span>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">C11</span><br><span>h11</span>
+            </td>
+            <td class="cell2" style="color: navy;">
+              <span style="text-decoration: underline">D11</span><br><span>h11</span>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td>
+            </td>
+            <td class="cell3" style="color: rgb(255, 255, 255);">
+              <span style="text-decoration: underline">H11</span><br><span>h11</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="cellborder">
+              h12</td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td class="cell2" style="border-bottom: 1pt solid black; color: navy;">
+              <span style="text-decoration: underline">B12</span><br><span>h12</span>
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td class="cell2" style="border-bottom: 1pt solid black; color: navy;">
+              <span style="text-decoration: underline">H12</span><br><span>h12</span>
+            </td>
+            <td style="border-left: red 2pt solid; border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+
+            </td>
+            <td colspan="2" style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+
+            </td>
+            <td colspan="2" style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-bottom: black 1pt solid">
+            </td>
+            <td style="border-right: black 1pt solid; border-bottom: black 1pt solid">
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+
+
+    </div>
+
+    <div class=" tab-item" id="tolerance-fits-chart-table">
+      <div class="canvas-container ">
+        <table>
+          <tbody>
+            <tr>
+              <td style="text-align: right; width: 65px;" rowspan="4" nowrap>
+                Nominal size:</td>
+              <td style="width: 70px" rowspan="4">
+                <input id="basicDimension" value="100" type="text" style="width:60px" class="input">
+              </td>
+              <td rowspan="2" style="width: 34px; text-align: right">
+                <div class="code-select">
+                  <select name="holeCode">
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="CD">CD</option>
+                    <option value="D">D</option>
+                    <option value="E">E</option>
+                    <option value="EF">EF</option>
+                    <option value="F">F</option>
+                    <option value="FG">FG</option>
+                    <option value="G">G</option>
+                    <option value="H" selected="selected">H</option>
+                    <option value="Js">Js</option>
+                    <option value="J">J</option>
+                    <option value="K">K</option>
+                    <option value="M">M</option>
+                    <option value="N">N</option>
+                    <option value="P">P</option>
+                    <option value="R">R</option>
+                    <option value="S">S</option>
+                    <option value="T">T</option>
+                    <option value="U">U</option>
+                    <option value="V">V</option>
+                    <option value="X">X</option>
+                    <option value="Y">Y</option>
+                    <option value="Z">Z</option>
+                    <option value="ZA">ZA</option>
+                    <option value="ZB">ZB</option>
+                    <option value="ZC">ZC</option>
+                  </select>
+                  <select name="holeGrade">
+                    <option value="01">01</option>
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8" selected="selected">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="11">11</option>
+                    <option value="12">12</option>
+                    <option value="13">13</option>
+                    <option value="14">14</option>
+                    <option value="15">15</option>
+                    <option value="16">16</option>
+                    <option value="17">17</option>
+                    <option value="18">18</option>
+                  </select>
+                </div>
+              </td>
+              <td>
+                <div style="width: 60px;" class="input-readonly" id="tfcHoleUpperDeviation"></div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div style="width: 60px" class="input-readonly" id="tfcHoleLowerDeviation"></div>
+              </td>
+            </tr>
+            <tr style="height:10px">
+              <td style="width: 34px; text-align: right; border-top: black 1pt solid;" rowspan="2">
+                <div class="code-select">
+                  <select name="shaftCode">
+                    <option value="a">a</option>
+                    <option value="b">b</option>
+                    <option value="c">c</option>
+                    <option value="cd">cd</option>
+                    <option value="d">d</option>
+                    <option value="e">e</option>
+                    <option value="ef">ef</option>
+                    <option value="f" selected="selected">f</option>
+                    <option value="fg">fg</option>
+                    <option value="g">g</option>
+                    <option value="h">h</option>
+                    <option value="js">js</option>
+                    <option value="j">j</option>
+                    <option value="k">k</option>
+                    <option value="m">m</option>
+                    <option value="n">n</option>
+                    <option value="p">p</option>
+                    <option value="r">r</option>
+                    <option value="s">s</option>
+                    <option value="t">t</option>
+                    <option value="u">u</option>
+                    <option value="v">v</option>
+                    <option value="x">x</option>
+                    <option value="y">y</option>
+                    <option value="z">z</option>
+                    <option value="za">za</option>
+                    <option value="zb">zb</option>
+                    <option value="zc">zc</option>
+                  </select>
+                  <select name="shaftGrade">
+                    <option value="01">01</option>
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7" selected="selected">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="11">11</option>
+                    <option value="12">12</option>
+                    <option value="13">13</option>
+                    <option value="14">14</option>
+                    <option value="15">15</option>
+                    <option value="16">16</option>
+                    <option value="17">17</option>
+                    <option value="18">18</option>
+                  </select>
+                </div>
+              </td>
+              <td style="text-align: left; border-top: black 1pt solid;">
+                <div style="width: 60px" class="input-readonly" id="tfcShaftUpperDeviation"></div>
+              </td>
+            </tr>
+            <tr>
+              <td style="text-align: left">
+                <div style="width: 60px" class="input-readonly" id="tfcShaftLowerDeviation"></div>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="text-align: right;">Fits type:</td>
+              <td colspan="2" id="fitsType"></td>
+            </tr>
+            <tr>
+              <td colspan="2" style="text-align: right;">Maximum clearance:</td>
+              <td colspan="2" id="maximumClearance"></td>
+            </tr>
+            <tr>
+              <td colspan="2" style="text-align: right;">Minimum clearance:</td>
+              <td colspan="2" id="minimumClearance"></td>
+            </tr>
+          </tbody>
+        </table>
+        <canvas id="canvas" height="300" width="200"></canvas>
+      </div>
+
+    </div>
+
+    <div style="margin: 20px 0;">
+      <h2>ISO 286 Fit Calculator: Usage Guide</h2>
+      <p>The ISO 286 Fit Calculator is a powerful tool designed to calculate hole and shaft limits and fits according to
+        the
+        ISO 286 standard. This standard provides a systematic approach to specifying tolerances and fits for linear
+        dimensions, particularly for holes and shafts. The calculator simplifies the process for engineers and
+        designers,
+        helping them determine the appropriate tolerances and fits to ensure interchangeability and functionality of
+        mechanical components.</p>
+
+      <h2>Basic Terminology</h2>
+      <p><strong>Nominal size</strong>: The intended size of a part as specified in the technical drawings.</p>
+      <p><strong>Tolerance</strong>: The permissible variation from the nominal size.</p>
+      <p><strong>Deviation</strong>: The difference between the actual size and the nominal size.</p>
+      <p><strong>Upper Deviation</strong>: The difference between the maximum limit size and the nominal size.</p>
+      <p><strong>Lower Deviation</strong>: The difference between the minimum limit size and the nominal size.</p>
+      <p><strong>Fit</strong>: The relationship between a hole and a shaft when assembled.</p>
+
+      <h2>Steps to Use the Calculator</h2>
+      <h3>1. Input Parameters</h3>
+      <p><strong style="color:#ff7716">Nominal size</strong>: Enter the nominal size of the hole or shaft in
+        millimeters.</p>
+      <p><strong style="color:#ff7716">Hole Tolerance</strong>: Select the tolerance class for the hole (e.g., H7). The
+        tolerance class is
+        designated by a letter (for fundamental deviation) and a number (for tolerance grade).</p>
+      <p><strong style="color:#ff7716">Shaft Tolerance</strong>: Select the tolerance class for the shaft (e.g., h7).
+      </p>
+
+
+
+      <h3>2. Results</h3>
+      <h4>Hole Results</h4>
+      <p><strong>Designation</strong>: The tolerance class designation for the hole (e.g., H7).</p>
+      <p><strong>Hole Upper Deviation</strong>: The maximum deviation of the hole from the nominal size.</p>
+      <p><strong>Hole Lower Deviation</strong>: The minimum deviation of the hole from the nominal size.</p>
+      <p><strong>Maximum Hole Size</strong>: The largest permissible size of the hole.</p>
+      <p><strong>Minimum Hole Size</strong>: The smallest permissible size of the hole.</p>
+
+      <h4>Shaft Results</h4>
+      <p><strong>Designation</strong>: The tolerance class designation for the shaft (e.g., h7).</p>
+      <p><strong>Shaft Upper Deviation</strong>: The maximum deviation of the shaft from the nominal size.</p>
+      <p><strong>Shaft Lower Deviation</strong>: The minimum deviation of the shaft from the nominal size.</p>
+      <p><strong>Maximum Shaft Size</strong>: The largest permissible size of the shaft.</p>
+      <p><strong>Minimum Shaft Size</strong>: The smallest permissible size of the shaft.</p>
+
+      <h4>Fit Results</h4>
+      <p><strong>Designation</strong>: The fit type (e.g., clearance, transition, or interference).</p>
+      <p><strong>Fit Type</strong>: Describes whether the fit is clearance, transition, or interference.</p>
+      <p><strong>Maximum Clearance/Interference</strong>: The largest possible clearance or interference between the
+        hole
+        and
+        shaft.</p>
+      <p><strong>Minimum Clearance/Interference</strong>: The smallest possible clearance or interference between the
+        hole
+        and
+        shaft.</p>
+
+      <h2>Tips for Using the Calculator</h2>
+      <p><strong>Ensure Accuracy</strong>: Make sure the Nominal size entered is within the range supported by the
+        calculator
+        (typically up to 3150 mm).</p>
+      <p><strong>Experiment with Tolerance Classes</strong>: Use the calculator to experiment with different tolerance
+        classes
+        to understand their impact on fit and clearance.</p>
+      <p><strong>Verify Results</strong>: Always verify the results with relevant standards and engineering guidelines,
+        as
+        the
+        calculator provides a general analysis.</p>
+
+      <h2>Conclusion</h2>
+      <p>The ISO 286 Fit Calculator is an essential tool for engineers and designers working with mechanical components.
+        By
+        following the steps outlined above, users can quickly determine the appropriate tolerances and fits for holes
+        and
+        shafts, ensuring that parts are designed to meet functional and interchangeability requirements.</p>
+    </div>
+
+  </div>
+
+  <script>
+
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+
+      function formatNumber (num) {
+        if (num == 0) return " " + 0;
+        return (num > 0 ? "+" : "") + num.toFixed(3);
+      }
+
+      let lastTD = {};
+      let lastColor = {};
+      function show (e, type) {
+        if (e.srcElement.tagName !== "TD") return;
+        const currTD = e.srcElement;
+        if (lastTD[type]) {
+          lastTD[type].style.color = lastColor[type];
+        }
+        lastColor[type] = currTD.style.color;
+        currTD.style.color = "red";
+        lastTD[type] = currTD;
+
+        showDeviations(type, currTD)
+
+      }
+
+      function initDeviations (type, td) {
+        lastTD[type] = document.getElementById(td);
+        lastColor[type] = lastTD[type].style.color;
+        lastTD[type].style.color = "red";
+        showDeviations(type, lastTD[type])
+      }
+
+      initDeviations('hole', 'holeH6')
+      initDeviations('shaft', 'shafth6')
+      //init
+      function initBasic (type, td, it) {
+        lastTD[type] = document.getElementById(td);
+        lastColor[type] = lastTD[type].style.color;
+        lastTD[type].style.color = "red";
+        showBasic(type, it)
+      }
+
+      initBasic("hb", "hbH7h6", "H7 h6")
+      initBasic("sb", "sbH7h6", "H7 h6")
+
+
+
+      function clickBasic (e, type) {
+        let td = e.srcElement;
+
+        while (td.tagName !== "TD") {
+          td = td.parentNode
+          if (!td) return;
+        }
+        if (!td.classList.contains("cell2") && !td.classList.contains("cell3")) return;
+
+        const currTD = td;
+        if (lastTD[type]) {
+          lastTD[type].style.color = lastColor[type];
+        }
+        lastColor[type] = currTD.style.color;
+        currTD.style.color = "red";
+        lastTD[type] = currTD;
+        const it = currTD.innerText.trim();
+        if (!it) return;
+        showBasic(type, it)
+
+      }
+
+      function showDeviations (type, src) {
+        const it = src.innerText.trim();
+        if (!it) return;
+        const [_, letters, itNum] = it.match(/([A-Za-z]+)(\d+)/);
+
+
+        document.getElementById(type + "DeviationCode").innerText = it;
+        const size = document.getElementById(type + "Dimension").value;
+
+        const { tolerance, lowerDeviation, upperDeviation } = calculateToleranceLimits(size, it)
+        document.getElementById(type + "Tolerance").innerText = tolerance
+        document.getElementById(type + "LowerDeviation").innerText = formatNumber(lowerDeviation)
+        document.getElementById(type + "UpperDeviation").innerText = formatNumber(upperDeviation)
+      }
+
+      function showBasic (type, it) {
+
+        //console.log(it)
+        const its = it.split(/\s/)
+        const [_1, holeLetters, holeItNum] = its[0].match(/([A-Za-z]+)(\d+)/g);
+        const [_2, shaftLetters, shaftItNum] = its[1].match(/([A-Za-z]+)(\d+)/g);
+
+        document.getElementById(type + "HoleDeviationCode").innerText = its[0];
+        document.getElementById(type + "ShaftDeviationCode").innerText = its[1];
+        const size = document.getElementById(type + "Dimension").value;
+
+        const { tolerance: t1, lowerDeviation: l1, upperDeviation: u1 } = calculateToleranceLimits(size, its[0])
+
+        //document.getElementById(type + "HoleTolerance").innerText = v1
+        document.getElementById(type + "HoleLowerDeviation").innerText = formatNumber(l1)
+        document.getElementById(type + "HoleUpperDeviation").innerText = formatNumber(u1)
+
+        const { tolerance: t2, lowerDeviation: l2, upperDeviation: u2 } = calculateToleranceLimits(size, its[1])
+        document.getElementById(type + "ShaftLowerDeviation").innerText = formatNumber(l2)
+        document.getElementById(type + "ShaftUpperDeviation").innerText = formatNumber(u2)
+
+        //drawToleranceDiagram(type, l1, u1, l2, u2);
+      }
+
+
+      const chart = document.getElementById("tolerance-fits-chart-table");
+
+
+      const scale = 500;
+      const holeOffsetSize = 25;
+      let shaftHalfOffsetSize = 25;
+
+      const basicDimension = document.getElementById("basicDimension");
+
+      basicDimension.addEventListener("change", onDraw)
+      chart.querySelectorAll("select").forEach(a => a.addEventListener("change", onDraw))
+
+      function onDraw () {
+        const values = {}
+        chart.querySelectorAll("select").forEach(a => values[a.name] = a.value)
+        // console.log(values)
+        const size = basicDimension.value;
+
+        const { tolerance: t1, lowerDeviation: l1, upperDeviation: u1 } = calculateToleranceLimits(size, values.holeCode + values.holeGrade)
+
+        document.getElementById("tfcHoleLowerDeviation").innerText = formatNumber(l1)
+        document.getElementById("tfcHoleUpperDeviation").innerText = formatNumber(u1)
+
+        const { tolerance: t2, lowerDeviation: l2, upperDeviation: u2 } = calculateToleranceLimits(size, values.shaftCode + values.shaftGrade)
+        document.getElementById("tfcShaftLowerDeviation").innerText = formatNumber(l2)
+        document.getElementById("tfcShaftUpperDeviation").innerText = formatNumber(u2)
+
+        const c1 = u1 - l2
+        const c2 = l1 - u2
+
+        //console.log(c1, c2)
+
+        let fitsType = "Transition Fit"
+        if (c1 < 0 && c2 < 0) {
+          fitsType = "Interference Fit"
+        } else if (c1 >= 0 && c2 >= 0) {
+          fitsType = "Clearance Fit"
+        }
+
+        document.getElementById("fitsType").innerText = fitsType
+        document.getElementById("maximumClearance").innerText = formatNumber(Math.max(Math.abs(c1), Math.abs(c2)))
+        document.getElementById("minimumClearance").innerText = formatNumber(Math.min(Math.abs(c1), Math.abs(c2)))
+
+
+        drawToleranceDiagram(l1 * scale, u1 * scale, l2 * scale, u2 * scale);
+      }
+
+      onDraw();
+
+
+      function drawToleranceDiagram (l1, u1, l2, u2) {
+        const canvas = document.getElementById("canvas")
+        var ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = 500;
+
+        if (l2 < 0) {
+          shaftHalfOffsetSize = 25;
+        } else {
+          shaftHalfOffsetSize = l2 / 2 + 25;
+        }
+
+
+        canvas.height = Math.max(u1, u2) + holeOffsetSize - Math.min(l1, l2) + shaftHalfOffsetSize * 2 + 20;
+
+
+        ctx.clearRect(0, 0, w, h);
+
+        const zero = Math.max(u1, u2) + holeOffsetSize
+
+        // 绘制轴系统
+        drawShaftSystem(ctx, zero, w, h, l2, u2);
+
+        // 绘制孔系统
+        drawHoleSystem(ctx, zero, w, h, l1, u1);
+
+
+
+        // 绘制间隙区域
+        drawClearanceZones(ctx, zero, w, h, l1, u1, l2, u2);
+
+
+        // 绘制基准系统
+        drawBaseSystem(ctx, zero, w, h);
+      }
+
+      function drawBaseSystem (ctx, zero, w, h) {
+        // 零线基准
+        ctx.setLineDash([5, 3]);
+        ctx.beginPath();
+        ctx.moveTo(0, zero);
+        ctx.lineTo(w, zero);
+        ctx.strokeStyle = '#666';
+        ctx.stroke();
+
+        // 基准标注
+        ctx.fillStyle = '#333';
+        ctx.font = 'italic 14px Arial';
+        ctx.fillText('+0', 5, zero - 10);
+        ctx.fillText('-0', 5, zero + 20);
+      }
+
+      function drawHoleSystem (ctx, zero, w, h, l1, u1) {
+        const esY = zero - u1;
+        const eiY = zero - l1;
+
+        ctx.fillStyle = '#1E90FF33';
+        ctx.fillRect(40, 0, w - 50, zero - l1);
+
+        // 绘制公差带
+        ctx.fillStyle = '#1E90FF66';
+        ctx.fillRect(40, esY, w - 50, eiY - esY);
+
+      }
+
+      function drawShaftSystem (ctx, zero, w, h, l2, u2) {
+        const esY = zero - u2;
+        const eiY = zero - l2;
+
+
+        ctx.setLineDash([]);
+
+        ctx.strokeStyle = "#cccccc";
+        ctx.fillStyle = '#ccc';
+        ctx.beginPath();
+
+
+        ctx.ellipse(w - 30, zero + shaftHalfOffsetSize - u2 - (l2 - u2) / 2, 10, shaftHalfOffsetSize - (l2 - u2) / 2, 0, Math.PI / 2, Math.PI / 2 + Math.PI, true);
+        ctx.fill();
+        ctx.stroke();
+
+
+        ctx.fillStyle = '#cccccc';
+        ctx.fillRect(w - 130, esY, 100, (u2 - l2) + shaftHalfOffsetSize * 2);
+
+        ctx.strokeStyle = "#cccccc";
+        ctx.fillStyle = '#eee';
+        // 绘制并填充椭圆
+        ctx.beginPath();
+        ctx.ellipse(w - 130, zero + shaftHalfOffsetSize - u2 - (l2 - u2) / 2, 10, shaftHalfOffsetSize - (l2 - u2) / 2, 0, 0, Math.PI * 2, false);
+        ctx.fill();
+        ctx.closePath();
+        ctx.stroke();
+
+
+
+
+
+        // 绘制公差带（向下延伸）
+        ctx.fillStyle = '#32CD3233';
+        ctx.fillRect(w - 140, esY, 120, eiY - esY);
+
+      }
+
+      function drawClearanceZones (ctx, zero, w, h, l1, u1, l2, u2) {
+        // 计算间隙参数
+        const cmaxHeight = Math.round((u1 - l2));
+        const cminHeight = Math.round((l1 - u2));
+
+
+        const maxColor = cmaxHeight > 0 ? "rgba(0,255,0,0.8)" : "rgba(255,0,0,0.8)";
+        // 最大间隙（红色）
+        ctx.fillStyle = maxColor;
+        ctx.fillRect(
+          30,
+          zero - u1,
+          5,
+          cmaxHeight
+        );
+
+
+
+        ctx.beginPath();
+        ctx.moveTo(30, zero - u1);
+        ctx.lineTo(100, zero - u1);
+        ctx.strokeStyle = "#000";
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(30, zero - l2);
+        ctx.lineTo(100, zero - l2);
+        ctx.strokeStyle = "#000";
+        ctx.stroke();
+
+
+
+        const minColor = cminHeight > 0 ? "rgba(0,255,0,0.8)" : "rgba(255,0,0,0.8)";
+
+        ctx.fillStyle = minColor;
+        ctx.fillRect(
+          w - 5,
+          zero - l1,
+          5,
+          cminHeight
+        );
+
+        ctx.beginPath();
+        ctx.moveTo(w, zero - u2);
+        ctx.lineTo(w - 100, zero - u2);
+        ctx.strokeStyle = "#000";
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(w, zero - l1);
+        ctx.lineTo(w - 100, zero - l1);
+        ctx.strokeStyle = "#000";
+        ctx.stroke();
+
+
+
+      }
+
+      document.getElementById("shaftDimension").addEventListener("change", (e) => showDeviations("shaft", lastTD["shaft"]))
+      document.getElementById("holeDimension").addEventListener("change", (e) => showDeviations("hole", lastTD["hole"]))
+
+      document.getElementById("shaft-table").addEventListener("click", (e) => show(e, "shaft"))
+      document.getElementById("hole-table").addEventListener("click", (e) => show(e, "hole"))
+
+      document.getElementById("hole-basic-system-table").addEventListener("click", (e) => clickBasic(e, "hb"))
+      document.getElementById("shaft-basic-system-table").addEventListener("click", (e) => clickBasic(e, "sb"))
+
+      function changeTab (hash) {
+        document.querySelectorAll(".tab-item").forEach(a => a.classList.remove("active"))
+        document.querySelectorAll(".tabs a").forEach(a => a.classList.remove("active"))
+
+        const tab = document.querySelector(hash + "-table");
+
+        tab.classList.add("active")
+
+        const tabHeader = document.querySelector(hash + "-tab");
+        tabHeader.classList.add("active")
+      }
+
+      changeTab(window.location.hash || "#shaft")
+
+      window.addEventListener('hashchange', function () {
+        changeTab(window.location.hash)
+        // 这里可以添加更多的逻辑来处理hash变化
+      });
+
+      document.getElementById("tabs").addEventListener('click', (event) => {
+        //event.preventDefault();
+        if (event.target.tagName === "A") {
+          //window.history.pushState({}, "#" + event.target.id)
+          //window.location.replace(event.target.href)
+        }
+
+      });
+    })
+
+
+
+  </script>
+</body>
+
+</html>
